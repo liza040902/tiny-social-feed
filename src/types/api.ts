@@ -42,3 +42,22 @@ export interface InfluencersResponse {
   meta: ApiMeta;
   data: Influencer[];
 }
+
+// Posts API types
+export interface ApiPost {
+  id: string;
+  url: string;
+  tweetId: string;
+  title: string;
+  hashtags: string[];
+  postedAt: string;
+  socialAccountId: string;
+  isDownloaded: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PostsResponse {
+  meta: ApiMeta;
+  data: ApiPost[];
+}

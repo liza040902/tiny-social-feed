@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Search, Sparkles, Loader2 } from "lucide-react";
 import { users as mockUsers, User } from "@/data/users";
-import { posts, Post } from "@/data/posts";
-import { Influencer } from "@/types/api";
-import { searchInfluencers } from "@/services/api";
+import { posts as mockPosts, Post } from "@/data/posts";
+import { Influencer, ApiPost } from "@/types/api";
+import { searchInfluencers, getAccountPosts } from "@/services/api";
 import { UserCard } from "@/components/UserCard";
 import { UserProfile } from "@/components/UserProfile";
 import { PostDetail } from "@/components/PostDetail";
@@ -13,8 +13,12 @@ import { cn } from "@/lib/utils";
 
 type View = "home" | "users" | "profile" | "post";
 
+interface UserWithAccount extends User {
+  socialAccountId?: string;
+}
+
 // Convert API Influencer to User format
-const mapInfluencerToUser = (influencer: Influencer): User => {
+const mapInfluencerToUser = (influencer: Influencer): UserWithAccount => {
   const primaryAccount = influencer.accounts[0];
   return {
     id: influencer.id,
@@ -24,16 +28,32 @@ const mapInfluencerToUser = (influencer: Influencer): User => {
     bio: primaryAccount?.bio || "",
     followers: parseInt(primaryAccount?.followersCount || "0"),
     following: parseInt(primaryAccount?.followingCount || "0"),
+    socialAccountId: primaryAccount?.id,
+  };
+};
+
+// Convert API Post to local Post format
+const mapApiPostToPost = (apiPost: ApiPost, userId: string): Post => {
+  return {
+    id: apiPost.id,
+    userId: userId,
+    title: apiPost.title.slice(0, 100) + (apiPost.title.length > 100 ? "..." : ""),
+    excerpt: apiPost.title.slice(0, 150) + (apiPost.title.length > 150 ? "..." : ""),
+    content: apiPost.title,
+    createdAt: apiPost.postedAt,
+    media: undefined, // API posts don't have media yet
   };
 };
 
 const Index = () => {
   const [view, setView] = useState<View>("home");
   const [username, setUsername] = useState("");
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserWithAccount | null>(null);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [searchResults, setSearchResults] = useState<UserWithAccount[]>([]);
+  const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -58,9 +78,26 @@ const Index = () => {
     }
   };
 
-  const handleUserClick = (user: User) => {
+  const handleUserClick = async (user: UserWithAccount) => {
     setSelectedUser(user);
     setView("profile");
+    setIsLoadingPosts(true);
+
+    try {
+      if (user.socialAccountId) {
+        const response = await getAccountPosts(user.socialAccountId);
+        const posts = response.data.map(p => mapApiPostToPost(p, user.id));
+        setUserPosts(posts);
+      } else {
+        // Fallback to mock posts
+        setUserPosts(mockPosts.slice(0, 5));
+      }
+    } catch (err) {
+      console.error("Failed to fetch posts:", err);
+      setUserPosts(mockPosts.slice(0, 5));
+    } finally {
+      setIsLoadingPosts(false);
+    }
   };
 
   const handlePostClick = (post: Post) => {
@@ -70,6 +107,7 @@ const Index = () => {
 
   const handleBackToUsers = () => {
     setSelectedUser(null);
+    setUserPosts([]);
     setView("users");
   };
 
@@ -84,14 +122,8 @@ const Index = () => {
     setSelectedUser(null);
     setSelectedPost(null);
     setSearchResults([]);
+    setUserPosts([]);
     setError(null);
-  };
-
-  const getUserPosts = (userId: string) => {
-    // For API users, return mock posts for now
-    return posts.filter(post => post.userId === userId).length > 0
-      ? posts.filter(post => post.userId === userId)
-      : posts.slice(0, 3); // Return first 3 mock posts if no matching posts
   };
 
   const getUserIndex = (userId: string) => {
@@ -202,13 +234,22 @@ const Index = () => {
 
         {/* User Profile View */}
         {view === "profile" && selectedUser && (
-          <UserProfile
-            user={selectedUser}
-            posts={getUserPosts(selectedUser.id)}
-            onBack={handleBackToUsers}
-            onPostClick={handlePostClick}
-            userIndex={getUserIndex(selectedUser.id)}
-          />
+          <div>
+            {isLoadingPosts ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="ml-2 text-muted-foreground">Loading posts...</span>
+              </div>
+            ) : (
+              <UserProfile
+                user={selectedUser}
+                posts={userPosts}
+                onBack={handleBackToUsers}
+                onPostClick={handlePostClick}
+                userIndex={getUserIndex(selectedUser.id)}
+              />
+            )}
+          </div>
         )}
 
         {/* Post Detail View */}
