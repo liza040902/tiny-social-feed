@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Search, Sparkles, Loader2, Zap } from "lucide-react";
-import { users as mockUsers, User } from "@/data/users";
-import { posts as mockPosts, Post } from "@/data/posts";
+import { Search, Loader2, Zap } from "lucide-react";
+import { User } from "@/data/users";
+import { Post } from "@/data/posts";
 import { Influencer, ApiPost } from "@/types/api";
 import { searchInfluencers, getAccountPosts, crawlInfluencer } from "@/services/api";
 import { UserCard } from "@/components/UserCard";
@@ -75,9 +75,11 @@ const Index = () => {
         const response = await searchInfluencers("");
         const users = response.data.map(mapInfluencerToUser);
         setSearchResults(users);
+        setError(null);
       } catch (err) {
         console.error("Failed to fetch influencers:", err);
-        setSearchResults(mockUsers as UserWithAccount[]);
+        setSearchResults([]);
+        setError("Không thể kết nối đến server. Vui lòng thử lại sau.");
       } finally {
         setIsLoading(false);
       }
@@ -94,11 +96,12 @@ const Index = () => {
       const response = await searchInfluencers(username);
       const users = response.data.map(mapInfluencerToUser);
       setSearchResults(users);
+      setError(null);
       setView("users");
     } catch (err) {
       console.error("Search failed:", err);
-      setError("Failed to search. Using mock data instead.");
-      setSearchResults(mockUsers as UserWithAccount[]);
+      setError("Không thể tìm kiếm. Vui lòng thử lại sau.");
+      setSearchResults([]);
       setView("users");
     } finally {
       setIsLoading(false);
@@ -260,34 +263,38 @@ const Index = () => {
             </form>
 
             {/* Results Header */}
-            {searchResults.length > 0 && (
+            {searchResults.length > 0 && !error && (
               <div className="mb-5 flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-foreground">
-                    {error ? "Featured" : username.trim() ? `Results for "${username}"` : "All Influencers"}
+                    {username.trim() ? `Results for "${username}"` : "All Influencers"}
                   </h2>
                   <p className="text-sm text-muted-foreground">
                     {searchResults.length} {searchResults.length === 1 ? "creator" : "creators"} found
                   </p>
                 </div>
-                {error && (
-                  <p className="text-sm text-destructive">{error}</p>
-                )}
               </div>
             )}
 
             {/* Results Grid */}
-            {searchResults.length === 0 && !isLoading ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="ml-3 text-muted-foreground">Đang tải...</span>
+              </div>
+            ) : error ? (
+              <div className="text-center py-20">
+                <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                  <Search className="h-8 w-8 text-destructive/50" />
+                </div>
+                <p className="text-destructive font-medium mb-2">{error}</p>
+              </div>
+            ) : searchResults.length === 0 ? (
               <div className="text-center py-20">
                 <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
                   <Search className="h-8 w-8 text-muted-foreground/50" />
                 </div>
-                <p className="text-muted-foreground">No influencers found</p>
-              </div>
-            ) : isLoading && searchResults.length === 0 ? (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <span className="ml-3 text-muted-foreground">Loading influencers...</span>
+                <p className="text-muted-foreground">Không tìm thấy influencer nào</p>
               </div>
             ) : (
               <div className="grid gap-3">
