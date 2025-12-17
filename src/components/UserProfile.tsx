@@ -4,6 +4,7 @@ import { PostCard } from "./PostCard";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Download, Loader2, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
+import { useEffect, useRef, useState } from "react";
 
 const gradients = [
   "from-violet-500 to-purple-600",
@@ -21,19 +22,66 @@ interface UserProfileProps {
   userIndex: number;
   onCrawl?: () => void;
   isCrawling?: boolean;
+  onLoadMore?: (page: number) => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
 }
 
-export function UserProfile({ 
-  user, 
-  posts, 
-  onBack, 
-  onPostClick, 
+export function UserProfile({
+  user,
+  posts,
+  onBack,
+  onPostClick,
   userIndex,
   onCrawl,
-  isCrawling 
+  isCrawling,
+  onLoadMore,
+  hasMore = false,
+  isLoadingMore = false
 }: UserProfileProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
+
+  // Setup Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (!onLoadMore || !hasMore || isLoadingMore) return;
+
+    const options = {
+      root: null,
+      rootMargin: '100px',
+      threshold: 0.1,
+    };
+
+    observerRef.current = new IntersectionObserver((entries) => {
+      const [entry] = entries;
+      if (entry.isIntersecting && hasMore && !isLoadingMore) {
+        const nextPage = currentPage + 1;
+        setCurrentPage(nextPage);
+        onLoadMore(nextPage);
+      }
+    }, options);
+
+    const currentTrigger = loadMoreTriggerRef.current;
+    if (currentTrigger) {
+      observerRef.current.observe(currentTrigger);
+    }
+
+    return () => {
+      if (observerRef.current && currentTrigger) {
+        observerRef.current.unobserve(currentTrigger);
+      }
+    };
+  }, [onLoadMore, hasMore, isLoadingMore, currentPage]);
+
+  // Reset page when user changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [user.id]);
+
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in" ref={scrollContainerRef}>
       {/* Back button */}
       <Button
         variant="ghost"
@@ -75,18 +123,41 @@ export function UserProfile({
           <h2 className="text-lg font-semibold text-foreground">Posts</h2>
           <span className="text-sm text-muted-foreground">{posts.length} posts</span>
         </div>
-        
+
         {posts.length > 0 ? (
-          <div className="space-y-3">
-            {posts.map((post, index) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onClick={() => onPostClick(post)}
-                index={index}
-              />
-            ))}
-          </div>
+          <>
+            <div className="space-y-3">
+              {posts.map((post, index) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  onClick={() => onPostClick(post)}
+                  index={index}
+                />
+              ))}
+            </div>
+
+            {/* Load more trigger */}
+            {hasMore && (
+              <div ref={loadMoreTriggerRef} className="py-8 flex justify-center">
+                {isLoadingMore && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Loading more posts...</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* End of posts message */}
+            {!hasMore && posts.length > 5 && (
+              <div className="py-8 text-center">
+                <p className="text-sm text-muted-foreground">
+                  You've reached the end of the posts
+                </p>
+              </div>
+            )}
+          </>
         ) : (
           <div className="glass rounded-xl p-8 text-center">
             <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">

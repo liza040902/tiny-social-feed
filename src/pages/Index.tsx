@@ -115,7 +115,7 @@ const Index = () => {
 
     try {
       if (user.socialAccountId) {
-        const response = await getAccountPosts(user.socialAccountId);
+        const response = await getAccountPosts(user.socialAccountId, 1, 10);
         const posts = response.data.map(p => mapApiPostToPost(p, user.id));
         setUserPosts(posts);
       } else {
@@ -129,9 +129,26 @@ const Index = () => {
     }
   };
 
+  const handleLoadMore = async (page: number) => {
+    if (!selectedUser?.socialAccountId || isLoadingPosts) return;
+
+    setIsLoadingPosts(true);
+    try {
+      const response = await getAccountPosts(selectedUser.socialAccountId, page, 10);
+      const newPosts = response.data.map(p => mapApiPostToPost(p, selectedUser.id));
+
+      // Append new posts to existing ones
+      setUserPosts(prevPosts => [...prevPosts, ...newPosts]);
+    } catch (err) {
+      console.error("Failed to load more posts:", err);
+    } finally {
+      setIsLoadingPosts(false);
+    }
+  };
+
   const handleCrawl = async () => {
     if (!selectedUser) return;
-    
+
     setIsCrawling(true);
     try {
       await crawlInfluencer(selectedUser.username, 10);
@@ -139,7 +156,7 @@ const Index = () => {
         title: "Crawl started!",
         description: `Fetching latest posts for @${selectedUser.username}. This may take a moment.`,
       });
-      
+
       // Refetch posts after a delay
       setTimeout(async () => {
         if (selectedUser.socialAccountId) {
@@ -328,6 +345,9 @@ const Index = () => {
                 userIndex={getUserIndex(selectedUser.id)}
                 onCrawl={handleCrawl}
                 isCrawling={isCrawling}
+                onLoadMore={handleLoadMore}
+                hasMore={userPosts.length > 0 && userPosts.length % 10 === 0}
+                isLoadingMore={isLoadingPosts}
               />
             )}
           </div>
