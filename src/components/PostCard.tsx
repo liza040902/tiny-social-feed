@@ -1,6 +1,7 @@
 import { Post } from "@/data/posts";
 import { cn } from "@/lib/utils";
 import { Calendar, Play, ChevronRight } from "lucide-react";
+import { useRef, useEffect, useState } from "react";
 
 interface PostCardProps {
   post: Post;
@@ -9,6 +10,10 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, onClick, index }: PostCardProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [isInView, setIsInView] = useState(false);
+
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
@@ -17,8 +22,35 @@ export function PostCard({ post, onClick, index }: PostCardProps) {
     });
   };
 
+  // IntersectionObserver to detect when card is in view
+  useEffect(() => {
+    if (!cardRef.current || post.media?.type !== "video") return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInView(entry.isIntersecting);
+      },
+      { threshold: 0.5 }
+    );
+
+    observer.observe(cardRef.current);
+    return () => observer.disconnect();
+  }, [post.media?.type]);
+
+  // Auto-play/pause video based on visibility
+  useEffect(() => {
+    if (!videoRef.current) return;
+
+    if (isInView) {
+      videoRef.current.play().catch(() => {});
+    } else {
+      videoRef.current.pause();
+    }
+  }, [isInView]);
+
   return (
     <article
+      ref={cardRef}
       onClick={onClick}
       className={cn(
         "group cursor-pointer rounded-xl overflow-hidden",
@@ -39,21 +71,22 @@ export function PostCard({ post, onClick, index }: PostCardProps) {
               />
             ) : (
               <div className="relative h-full w-full">
-                {post.media.thumbnail ? (
-                  <img
-                    src={post.media.thumbnail}
-                    alt={post.title}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="h-full w-full bg-gradient-to-br from-primary/20 to-accent/20" />
-                )}
-                {/* Video play overlay */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/90 text-white shadow-lg transition-transform duration-300 group-hover:scale-110">
-                    <Play className="h-3.5 w-3.5 ml-0.5" fill="currentColor" />
+                <video
+                  ref={videoRef}
+                  src={post.media.url}
+                  muted
+                  loop
+                  playsInline
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                {/* Video play indicator */}
+                {!isInView && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/90 text-white shadow-lg">
+                      <Play className="h-3.5 w-3.5 ml-0.5" fill="currentColor" />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>
