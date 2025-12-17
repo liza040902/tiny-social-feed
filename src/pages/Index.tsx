@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Sparkles, Loader2 } from "lucide-react";
 import { users as mockUsers, User } from "@/data/users";
 import { posts as mockPosts, Post } from "@/data/posts";
@@ -64,6 +64,24 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingPosts, setIsLoadingPosts] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch all influencers on initial load
+  useEffect(() => {
+    const fetchInitialInfluencers = async () => {
+      setIsLoading(true);
+      try {
+        const response = await searchInfluencers("");
+        const users = response.data.map(mapInfluencerToUser);
+        setSearchResults(users);
+      } catch (err) {
+        console.error("Failed to fetch influencers:", err);
+        setSearchResults(mockUsers);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchInitialInfluencers();
+  }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,10 +227,15 @@ const Index = () => {
               </div>
             )}
 
-            {searchResults.length === 0 ? (
+            {searchResults.length === 0 && !isLoading ? (
               <div className="text-center py-16 text-muted-foreground">
                 <Search className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                <p>Enter a name to search for influencers</p>
+                <p>No influencers found</p>
+              </div>
+            ) : isLoading && searchResults.length === 0 ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="ml-2 text-muted-foreground">Loading influencers...</span>
               </div>
             ) : (
               <div className="space-y-3">
