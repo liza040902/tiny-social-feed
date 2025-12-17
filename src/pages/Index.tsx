@@ -85,7 +85,7 @@ const Index = () => {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim()) return;
+    // Allow empty search to get all influencers
 
     setIsLoading(true);
     setError(null);
@@ -196,7 +196,7 @@ const Index = () => {
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={isLoading || !username.trim()}
+                  disabled={isLoading}
                   className={cn(
                     "absolute right-2 top-1/2 -translate-y-1/2",
                     "h-8 px-4 rounded-lg",
@@ -216,7 +216,7 @@ const Index = () => {
             {searchResults.length > 0 && (
               <div className="mb-4">
                 <h2 className="text-lg font-medium text-foreground">
-                  {error ? "Featured voices" : `Results for "${username}"`}
+                  {error ? "Featured voices" : username.trim() ? `Results for "${username}"` : "All influencers"}
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   {searchResults.length} {searchResults.length === 1 ? "result" : "results"} found
