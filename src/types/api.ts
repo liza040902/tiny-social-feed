@@ -28,6 +28,7 @@ export interface Account {
   social: Social;
   createdAt: string;
   updatedAt: string;
+  avatar: string; 
 }
 
 export interface Influencer {

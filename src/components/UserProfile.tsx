@@ -98,14 +98,18 @@ export function UserProfile({
         <div className="flex items-start gap-5">
           <div
             className={cn(
-              "relative flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-2xl",
+              "relative flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full",
               "bg-gradient-to-br text-xl font-bold text-white",
               "ring-2 ring-white/10 ring-offset-4 ring-offset-background",
               "shadow-glow",
               gradients[userIndex % gradients.length]
             )}
           >
-            {user.avatar}
+            <img
+              src={user.avatar}
+              alt={user.name}
+              className="h-full w-full rounded-full object-cover"
+            />
           </div>
           <div className="min-w-0 flex-1 pt-1">
             <h1 className="text-2xl font-bold text-foreground">{user.name}</h1>

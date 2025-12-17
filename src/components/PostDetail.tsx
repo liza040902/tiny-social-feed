@@ -48,7 +48,7 @@ export function PostDetail({ post, author, onBack, authorIndex }: PostDetailProp
         <h1 className="text-2xl md:text-3xl font-medium text-foreground leading-tight text-balance">
           {post.title}
         </h1>
-        
+
         <div className="mt-4 flex items-center gap-3">
           <div
             className={cn(
@@ -57,7 +57,11 @@ export function PostDetail({ post, author, onBack, authorIndex }: PostDetailProp
               gradients[authorIndex % gradients.length]
             )}
           >
-            {author.avatar}
+            <img
+              src={author.avatar}
+              alt={author.name}
+              className="h-full w-full rounded-full object-cover"
+            />
           </div>
           <div>
             <p className="text-sm font-medium text-foreground">{author.name}</p>

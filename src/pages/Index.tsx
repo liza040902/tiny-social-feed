@@ -28,7 +28,7 @@ const mapInfluencerToUser = (influencer: Influencer): UserWithAccount => {
     id: influencer.id,
     name: influencer.name,
     username: primaryAccount?.username || influencer.name.toLowerCase().replace(/\s/g, ""),
-    avatar: influencer.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase(),
+    avatar: primaryAccount?.avatar || "https://pbs.twimg.com/profile_images/1908645510853844992/Kr7fu9HW_200x200.jpg",
     bio: primaryAccount?.bio || "",
     followers: parseInt(primaryAccount?.followersCount || "0"),
     following: parseInt(primaryAccount?.followingCount || "0"),
