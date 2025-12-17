@@ -53,6 +53,7 @@ export interface ApiPost {
   postedAt: string;
   socialAccountId: string;
   isDownloaded: boolean;
+  filePath: string | null;
   createdAt: string;
   updatedAt: string;
 }

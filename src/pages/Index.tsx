@@ -34,6 +34,9 @@ const mapInfluencerToUser = (influencer: Influencer): UserWithAccount => {
 
 // Convert API Post to local Post format
 const mapApiPostToPost = (apiPost: ApiPost, userId: string): Post => {
+  // Check if there's a video file available
+  const hasVideo = apiPost.filePath && apiPost.isDownloaded;
+  
   return {
     id: apiPost.id,
     userId: userId,
@@ -41,7 +44,10 @@ const mapApiPostToPost = (apiPost: ApiPost, userId: string): Post => {
     excerpt: apiPost.title.slice(0, 150) + (apiPost.title.length > 150 ? "..." : ""),
     content: apiPost.title,
     createdAt: apiPost.postedAt,
-    media: undefined, // API posts don't have media yet
+    media: hasVideo ? {
+      type: "video",
+      url: `/${apiPost.filePath}`, // Files in public folder
+    } : undefined,
   };
 };
 

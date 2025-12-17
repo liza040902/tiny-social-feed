@@ -1,8 +1,7 @@
-import { useState } from "react";
 import { Post } from "@/data/posts";
 import { User } from "@/data/users";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Calendar, Image, Play, X } from "lucide-react";
+import { ArrowLeft, Calendar } from "lucide-react";
 import { Button } from "./ui/button";
 
 const gradients = [
@@ -21,7 +20,6 @@ interface PostDetailProps {
 }
 
 export function PostDetail({ post, author, onBack, authorIndex }: PostDetailProps) {
-  const [showVideo, setShowVideo] = useState(false);
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -81,51 +79,15 @@ export function PostDetail({ post, author, onBack, authorIndex }: PostDetailProp
               className="w-full object-cover"
             />
           ) : (
-            <div className="relative aspect-video bg-muted">
-              {showVideo ? (
-                <div className="relative h-full w-full">
-                  <iframe
-                    src={`${post.media.url}?autoplay=1`}
-                    title={post.title}
-                    className="h-full w-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowVideo(false)}
-                    className="absolute top-2 right-2 h-8 w-8 rounded-full bg-foreground/70 text-background hover:bg-foreground/90"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowVideo(true)}
-                  className="group relative h-full w-full"
-                >
-                  {post.media.thumbnail ? (
-                    <img
-                      src={post.media.thumbnail}
-                      alt={post.title}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-full w-full bg-gradient-to-br from-muted to-secondary" />
-                  )}
-                  <div className="absolute inset-0 flex items-center justify-center bg-foreground/20 transition-colors group-hover:bg-foreground/30">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform duration-300 group-hover:scale-110">
-                      <Play className="h-7 w-7 ml-1" fill="currentColor" />
-                    </div>
-                  </div>
-                  {/* Video badge */}
-                  <div className="absolute top-3 right-3 flex items-center gap-1.5 rounded-md bg-foreground/70 px-2.5 py-1.5 text-sm text-background">
-                    <Play className="h-4 w-4" />
-                    <span>Watch Video</span>
-                  </div>
-                </button>
-              )}
+            <div className="relative aspect-video bg-muted rounded-lg overflow-hidden">
+              <video
+                src={post.media.url}
+                controls
+                className="h-full w-full object-contain bg-black"
+                poster={post.media.thumbnail}
+              >
+                Your browser does not support the video tag.
+              </video>
             </div>
           )}
         </div>
