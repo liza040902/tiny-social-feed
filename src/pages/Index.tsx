@@ -1,23 +1,24 @@
 import { useState, useEffect } from "react";
-import { Search, Sparkles, Loader2 } from "lucide-react";
+import { Search, Sparkles, Loader2, Zap } from "lucide-react";
 import { users as mockUsers, User } from "@/data/users";
 import { posts as mockPosts, Post } from "@/data/posts";
 import { Influencer, ApiPost } from "@/types/api";
-import { searchInfluencers, getAccountPosts } from "@/services/api";
+import { searchInfluencers, getAccountPosts, crawlInfluencer } from "@/services/api";
 import { UserCard } from "@/components/UserCard";
 import { UserProfile } from "@/components/UserProfile";
 import { PostDetail } from "@/components/PostDetail";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 type View = "users" | "profile" | "post";
 
 const URL_SOURCE = import.meta.env.VITE_URL_SOURCE || "http://localhost:3001/public/";
 
-
 interface UserWithAccount extends User {
   socialAccountId?: string;
+  username: string;
 }
 
 // Convert API Influencer to User format
@@ -37,7 +38,6 @@ const mapInfluencerToUser = (influencer: Influencer): UserWithAccount => {
 
 // Convert API Post to local Post format
 const mapApiPostToPost = (apiPost: ApiPost, userId: string): Post => {
-  // Check if there's a video file available
   const hasVideo = apiPost.filePath && apiPost.isDownloaded;
 
   return {
@@ -49,7 +49,7 @@ const mapApiPostToPost = (apiPost: ApiPost, userId: string): Post => {
     createdAt: apiPost.postedAt,
     media: hasVideo ? {
       type: "video",
-      url: `${URL_SOURCE}/${apiPost.filePath.replace(/^public[\\/]/, '')}`, // Files in public folder
+      url: `${URL_SOURCE}/${apiPost.filePath.replace(/^public[\\/]/, '')}`,
     } : undefined,
   };
 };
@@ -63,7 +63,9 @@ const Index = () => {
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingPosts, setIsLoadingPosts] = useState(false);
+  const [isCrawling, setIsCrawling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Fetch all influencers on initial load
   useEffect(() => {
@@ -75,7 +77,7 @@ const Index = () => {
         setSearchResults(users);
       } catch (err) {
         console.error("Failed to fetch influencers:", err);
-        setSearchResults(mockUsers);
+        setSearchResults(mockUsers as UserWithAccount[]);
       } finally {
         setIsLoading(false);
       }
@@ -85,8 +87,6 @@ const Index = () => {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Allow empty search to get all influencers
-
     setIsLoading(true);
     setError(null);
 
@@ -98,7 +98,7 @@ const Index = () => {
     } catch (err) {
       console.error("Search failed:", err);
       setError("Failed to search. Using mock data instead.");
-      setSearchResults(mockUsers);
+      setSearchResults(mockUsers as UserWithAccount[]);
       setView("users");
     } finally {
       setIsLoading(false);
@@ -116,14 +116,48 @@ const Index = () => {
         const posts = response.data.map(p => mapApiPostToPost(p, user.id));
         setUserPosts(posts);
       } else {
-        // Fallback to mock posts
-        setUserPosts(mockPosts.slice(0, 5));
+        setUserPosts([]);
       }
     } catch (err) {
       console.error("Failed to fetch posts:", err);
-      setUserPosts(mockPosts.slice(0, 5));
+      setUserPosts([]);
     } finally {
       setIsLoadingPosts(false);
+    }
+  };
+
+  const handleCrawl = async () => {
+    if (!selectedUser) return;
+    
+    setIsCrawling(true);
+    try {
+      await crawlInfluencer(selectedUser.username, 10);
+      toast({
+        title: "Crawl started!",
+        description: `Fetching latest posts for @${selectedUser.username}. This may take a moment.`,
+      });
+      
+      // Refetch posts after a delay
+      setTimeout(async () => {
+        if (selectedUser.socialAccountId) {
+          try {
+            const response = await getAccountPosts(selectedUser.socialAccountId);
+            const posts = response.data.map(p => mapApiPostToPost(p, selectedUser.id));
+            setUserPosts(posts);
+          } catch (err) {
+            console.error("Failed to refetch posts:", err);
+          }
+        }
+        setIsCrawling(false);
+      }, 5000);
+    } catch (err) {
+      console.error("Crawl failed:", err);
+      toast({
+        title: "Crawl failed",
+        description: "Could not fetch posts. Please try again later.",
+        variant: "destructive",
+      });
+      setIsCrawling(false);
     }
   };
 
@@ -158,16 +192,18 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-border/50 bg-background/80 backdrop-blur-sm">
+      <header className="sticky top-0 z-10 border-b border-border/30 glass">
         <div className="container py-4">
           <button
             onClick={handleBackToHome}
-            className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"
+            className="flex items-center gap-2.5 text-foreground hover:text-primary transition-colors group"
           >
-            <Sparkles className="h-5 w-5 text-primary" />
-            <span className="text-lg font-serif font-medium italic">Pulse</span>
+            <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-accent group-hover:shadow-glow transition-shadow">
+              <Zap className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-lg font-bold tracking-tight">Pulse</span>
           </button>
         </div>
       </header>
@@ -176,21 +212,31 @@ const Index = () => {
         {/* Users List View */}
         {view === "users" && (
           <div className="animate-fade-in">
+            {/* Hero Section */}
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-foreground mb-2">
+                Discover <span className="gradient-text">Influencers</span>
+              </h1>
+              <p className="text-muted-foreground">
+                Search and explore top social media creators
+              </p>
+            </div>
+
             {/* Search Bar */}
             <form onSubmit={handleSearch} className="mb-8">
               <div className="relative max-w-xl">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/60" />
                 <Input
                   type="text"
-                  placeholder="Search influencers..."
+                  placeholder="Search by name..."
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   disabled={isLoading}
                   className={cn(
-                    "h-12 pl-12 pr-12 rounded-xl",
-                    "bg-card border-border/50 shadow-soft",
-                    "focus:shadow-card focus:border-primary/30",
-                    "placeholder:text-muted-foreground/60"
+                    "h-12 pl-12 pr-28 rounded-xl",
+                    "glass border-border/50",
+                    "focus:ring-2 focus:ring-primary/30 focus:border-primary/50",
+                    "placeholder:text-muted-foreground/50"
                   )}
                 />
                 <Button
@@ -200,7 +246,8 @@ const Index = () => {
                   className={cn(
                     "absolute right-2 top-1/2 -translate-y-1/2",
                     "h-8 px-4 rounded-lg",
-                    "bg-primary hover:bg-primary/90 text-primary-foreground"
+                    "bg-gradient-to-r from-primary to-accent",
+                    "hover:opacity-90 text-white font-medium"
                   )}
                 >
                   {isLoading ? (
@@ -212,33 +259,38 @@ const Index = () => {
               </div>
             </form>
 
-            {/* Results */}
+            {/* Results Header */}
             {searchResults.length > 0 && (
-              <div className="mb-4">
-                <h2 className="text-lg font-medium text-foreground">
-                  {error ? "Featured voices" : username.trim() ? `Results for "${username}"` : "All influencers"}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {searchResults.length} {searchResults.length === 1 ? "result" : "results"} found
-                </p>
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">
+                    {error ? "Featured" : username.trim() ? `Results for "${username}"` : "All Influencers"}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {searchResults.length} {searchResults.length === 1 ? "creator" : "creators"} found
+                  </p>
+                </div>
                 {error && (
-                  <p className="text-sm text-destructive mt-1">{error}</p>
+                  <p className="text-sm text-destructive">{error}</p>
                 )}
               </div>
             )}
 
+            {/* Results Grid */}
             {searchResults.length === 0 && !isLoading ? (
-              <div className="text-center py-16 text-muted-foreground">
-                <Search className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                <p>No influencers found</p>
+              <div className="text-center py-20">
+                <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Search className="h-8 w-8 text-muted-foreground/50" />
+                </div>
+                <p className="text-muted-foreground">No influencers found</p>
               </div>
             ) : isLoading && searchResults.length === 0 ? (
-              <div className="flex items-center justify-center py-16">
+              <div className="flex items-center justify-center py-20">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <span className="ml-2 text-muted-foreground">Loading influencers...</span>
+                <span className="ml-3 text-muted-foreground">Loading influencers...</span>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="grid gap-3">
                 {searchResults.map((user, index) => (
                   <UserCard
                     key={user.id}
@@ -256,9 +308,9 @@ const Index = () => {
         {view === "profile" && selectedUser && (
           <div>
             {isLoadingPosts ? (
-              <div className="flex items-center justify-center py-12">
+              <div className="flex items-center justify-center py-20">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <span className="ml-2 text-muted-foreground">Loading posts...</span>
+                <span className="ml-3 text-muted-foreground">Loading posts...</span>
               </div>
             ) : (
               <UserProfile
@@ -267,6 +319,8 @@ const Index = () => {
                 onBack={handleBackToUsers}
                 onPostClick={handlePostClick}
                 userIndex={getUserIndex(selectedUser.id)}
+                onCrawl={handleCrawl}
+                isCrawling={isCrawling}
               />
             )}
           </div>
