@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type View = "home" | "users" | "profile" | "post";
+type View = "users" | "profile" | "post";
 
 const URL_SOURCE = import.meta.env.VITE_URL_SOURCE || "http://localhost:3001/public/";
 
@@ -55,7 +55,7 @@ const mapApiPostToPost = (apiPost: ApiPost, userId: string): Post => {
 };
 
 const Index = () => {
-  const [view, setView] = useState<View>("home");
+  const [view, setView] = useState<View>("users");
   const [username, setUsername] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserWithAccount | null>(null);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -126,7 +126,7 @@ const Index = () => {
   };
 
   const handleBackToHome = () => {
-    setView("home");
+    setView("users");
     setUsername("");
     setSelectedUser(null);
     setSelectedPost(null);
@@ -155,28 +155,21 @@ const Index = () => {
       </header>
 
       <main className="container py-8">
-        {/* Home View */}
-        {view === "home" && (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] animate-fade-in">
-            <div className="text-center mb-8">
-              <h1 className="text-4xl md:text-5xl font-serif italic text-foreground mb-3">
-                Discover voices
-              </h1>
-              <p className="text-muted-foreground max-w-md">
-                Explore posts from thought leaders and influential voices
-              </p>
-            </div>
-
-            <form onSubmit={handleSearch} className="w-full max-w-md">
-              <div className="relative">
+        {/* Users List View */}
+        {view === "users" && (
+          <div className="animate-fade-in">
+            {/* Search Bar */}
+            <form onSubmit={handleSearch} className="mb-8">
+              <div className="relative max-w-xl">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/60" />
                 <Input
                   type="text"
-                  placeholder="Enter username to explore..."
+                  placeholder="Search influencers..."
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   disabled={isLoading}
                   className={cn(
-                    "h-12 pl-4 pr-12 rounded-full",
+                    "h-12 pl-12 pr-12 rounded-xl",
                     "bg-card border-border/50 shadow-soft",
                     "focus:shadow-card focus:border-primary/30",
                     "placeholder:text-muted-foreground/60"
@@ -184,47 +177,42 @@ const Index = () => {
                 />
                 <Button
                   type="submit"
-                  size="icon"
-                  disabled={isLoading}
+                  size="sm"
+                  disabled={isLoading || !username.trim()}
                   className={cn(
-                    "absolute right-1.5 top-1/2 -translate-y-1/2",
-                    "h-9 w-9 rounded-full",
+                    "absolute right-2 top-1/2 -translate-y-1/2",
+                    "h-8 px-4 rounded-lg",
                     "bg-primary hover:bg-primary/90 text-primary-foreground"
                   )}
                 >
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Search className="h-4 w-4" />
+                    "Search"
                   )}
                 </Button>
               </div>
             </form>
 
-            <p className="mt-6 text-xs text-muted-foreground">
-              Search for influencers by name
-            </p>
-          </div>
-        )}
-
-        {/* Users List View */}
-        {view === "users" && (
-          <div className="animate-fade-in">
-            <div className="mb-6">
-              <h2 className="text-xl font-serif italic text-foreground">
-                {error ? "Featured voices" : `Results for "${username}"`}
-              </h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                {searchResults.length} {searchResults.length === 1 ? "result" : "results"} found
-              </p>
-              {error && (
-                <p className="text-sm text-destructive mt-2">{error}</p>
-              )}
-            </div>
+            {/* Results */}
+            {searchResults.length > 0 && (
+              <div className="mb-4">
+                <h2 className="text-lg font-medium text-foreground">
+                  {error ? "Featured voices" : `Results for "${username}"`}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {searchResults.length} {searchResults.length === 1 ? "result" : "results"} found
+                </p>
+                {error && (
+                  <p className="text-sm text-destructive mt-1">{error}</p>
+                )}
+              </div>
+            )}
 
             {searchResults.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                No results found. Try a different search term.
+              <div className="text-center py-16 text-muted-foreground">
+                <Search className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                <p>Enter a name to search for influencers</p>
               </div>
             ) : (
               <div className="space-y-3">
