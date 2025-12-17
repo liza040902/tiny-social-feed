@@ -29,3 +29,27 @@ export async function getAccountPosts(
 
   return response.json();
 }
+
+export interface CrawlResponse {
+  success: boolean;
+  message?: string;
+}
+
+export async function crawlInfluencer(
+  username: string,
+  maxCollectCount: number = 10
+): Promise<CrawlResponse> {
+  const response = await fetch(`${API_BASE_URL}/crawl`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ username, maxCollectCount }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+
+  return response.json();
+}

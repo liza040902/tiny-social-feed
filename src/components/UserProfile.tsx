@@ -2,32 +2,36 @@ import { User } from "@/data/users";
 import { Post } from "@/data/posts";
 import { PostCard } from "./PostCard";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Users } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
 
 const gradients = [
-  "from-rose-400 to-orange-300",
-  "from-violet-400 to-purple-300",
-  "from-cyan-400 to-blue-300",
-  "from-emerald-400 to-teal-300",
-  "from-amber-400 to-yellow-300",
+  "from-violet-500 to-purple-600",
+  "from-pink-500 to-rose-600",
+  "from-cyan-500 to-blue-600",
+  "from-emerald-500 to-teal-600",
+  "from-amber-500 to-orange-600",
 ];
 
 interface UserProfileProps {
-  user: User;
+  user: User & { username: string };
   posts: Post[];
   onBack: () => void;
   onPostClick: (post: Post) => void;
   userIndex: number;
+  onCrawl?: () => void;
+  isCrawling?: boolean;
 }
 
-export function UserProfile({ user, posts, onBack, onPostClick, userIndex }: UserProfileProps) {
-  const formatNumber = (num: number): string => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
-    return num.toString();
-  };
-
+export function UserProfile({ 
+  user, 
+  posts, 
+  onBack, 
+  onPostClick, 
+  userIndex,
+  onCrawl,
+  isCrawling 
+}: UserProfileProps) {
   return (
     <div className="animate-fade-in">
       {/* Back button */}
@@ -35,58 +39,88 @@ export function UserProfile({ user, posts, onBack, onPostClick, userIndex }: Use
         variant="ghost"
         size="sm"
         onClick={onBack}
-        className="mb-4 -ml-2 text-muted-foreground hover:text-foreground"
+        className="mb-6 -ml-2 text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="mr-1.5 h-4 w-4" />
         Back
       </Button>
 
       {/* Profile header */}
-      <header className="mb-6">
-        <div className="flex items-start gap-4">
+      <header className="mb-8">
+        <div className="flex items-start gap-5">
           <div
             className={cn(
-              "flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full",
-              "bg-gradient-to-br text-lg font-medium text-primary-foreground",
+              "relative flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-2xl",
+              "bg-gradient-to-br text-xl font-bold text-white",
+              "ring-2 ring-white/10 ring-offset-4 ring-offset-background",
+              "shadow-glow",
               gradients[userIndex % gradients.length]
             )}
           >
             {user.avatar}
           </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-medium text-foreground">{user.name}</h1>
+          <div className="min-w-0 flex-1 pt-1">
+            <h1 className="text-2xl font-bold text-foreground">{user.name}</h1>
             <p className="text-muted-foreground">@{user.username}</p>
-            <p className="mt-2 text-sm text-secondary-foreground">{user.bio}</p>
+            {user.bio && (
+              <p className="mt-3 text-sm text-secondary-foreground/80 leading-relaxed">{user.bio}</p>
+            )}
           </div>
-        </div>
-
-        {/* Stats */}
-        <div className="mt-4 flex items-center gap-6 text-sm">
-          {/* <div className="flex items-center gap-1.5">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium text-foreground">{formatNumber(user.followers)}</span>
-            <span className="text-muted-foreground">followers</span>
-          </div> */}
-          {/* <div>
-            <span className="font-medium text-foreground">{formatNumber(user.following)}</span>
-            <span className="text-muted-foreground ml-1">following</span>
-          </div> */}
         </div>
       </header>
 
       {/* Posts section */}
       <section>
-        <h2 className="text-lg font-medium text-foreground mb-4">Posts</h2>
-        <div className="space-y-3">
-          {posts.map((post, index) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              onClick={() => onPostClick(post)}
-              index={index}
-            />
-          ))}
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-semibold text-foreground">Posts</h2>
+          <span className="text-sm text-muted-foreground">{posts.length} posts</span>
         </div>
+        
+        {posts.length > 0 ? (
+          <div className="space-y-3">
+            {posts.map((post, index) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                onClick={() => onPostClick(post)}
+                index={index}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="glass rounded-xl p-8 text-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <Sparkles className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">No posts yet</h3>
+            <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+              Want to discover more about this influencer? We can fetch their latest content for you.
+            </p>
+            {onCrawl && (
+              <Button
+                onClick={onCrawl}
+                disabled={isCrawling}
+                className={cn(
+                  "bg-gradient-to-r from-primary to-accent",
+                  "hover:opacity-90 text-white font-medium",
+                  "shadow-glow"
+                )}
+              >
+                {isCrawling ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Fetching content...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    Fetch Latest Posts
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        )}
       </section>
     </div>
   );
