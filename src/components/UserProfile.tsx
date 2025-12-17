@@ -69,93 +69,59 @@ export function UserProfile({
         </div>
       </header>
 
-      {/* Separate posts by type */}
-      {(() => {
-        const videoPosts = posts.filter(p => p.media?.type === "video");
-        const otherPosts = posts.filter(p => p.media?.type !== "video");
+      {/* Posts section */}
+      <section>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-semibold text-foreground">Posts</h2>
+          <span className="text-sm text-muted-foreground">{posts.length} posts</span>
+        </div>
         
-        return (
-          <>
-            {/* Video Posts Section */}
-            {videoPosts.length > 0 && (
-              <section className="mb-8">
-                <div className="flex items-center justify-between mb-5">
-                  <h2 className="text-lg font-semibold text-foreground">Videos</h2>
-                  <span className="text-sm text-muted-foreground">{videoPosts.length} videos</span>
-                </div>
-                <div className="space-y-3">
-                  {videoPosts.map((post, index) => (
-                    <PostCard
-                      key={post.id}
-                      post={post}
-                      onClick={() => onPostClick(post)}
-                      index={index}
-                    />
-                  ))}
-                </div>
-              </section>
+        {posts.length > 0 ? (
+          <div className="space-y-3">
+            {posts.map((post, index) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                onClick={() => onPostClick(post)}
+                index={index}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="glass rounded-xl p-8 text-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <Sparkles className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">No posts yet</h3>
+            <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+              Want to discover more about this influencer? We can fetch their latest content for you.
+            </p>
+            {onCrawl && (
+              <Button
+                onClick={onCrawl}
+                disabled={isCrawling}
+                className={cn(
+                  "bg-gradient-to-r from-primary to-accent",
+                  "hover:opacity-90 text-white font-medium",
+                  "shadow-glow"
+                )}
+              >
+                {isCrawling ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Fetching content...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    Fetch Latest Posts
+                  </>
+                )}
+              </Button>
             )}
-
-            {/* Other Posts Section */}
-            {otherPosts.length > 0 && (
-              <section className="mb-8">
-                <div className="flex items-center justify-between mb-5">
-                  <h2 className="text-lg font-semibold text-foreground">Posts</h2>
-                  <span className="text-sm text-muted-foreground">{otherPosts.length} posts</span>
-                </div>
-                <div className="space-y-3">
-                  {otherPosts.map((post, index) => (
-                    <PostCard
-                      key={post.id}
-                      post={post}
-                      onClick={() => onPostClick(post)}
-                      index={index}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Empty state */}
-            {posts.length === 0 && (
-              <section>
-                <div className="glass rounded-xl p-8 text-center">
-                  <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                    <Sparkles className="h-8 w-8 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">No posts yet</h3>
-                  <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-                    Want to discover more about this influencer? We can fetch their latest content for you.
-                  </p>
-                  {onCrawl && (
-                    <Button
-                      onClick={onCrawl}
-                      disabled={isCrawling}
-                      className={cn(
-                        "bg-gradient-to-r from-primary to-accent",
-                        "hover:opacity-90 text-white font-medium",
-                        "shadow-glow"
-                      )}
-                    >
-                      {isCrawling ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Fetching content...
-                        </>
-                      ) : (
-                        <>
-                          <Download className="mr-2 h-4 w-4" />
-                          Fetch Latest Posts
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              </section>
-            )}
-          </>
-        );
-      })()}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
