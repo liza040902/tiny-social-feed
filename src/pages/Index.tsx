@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Search, Sparkles } from "lucide-react";
-import { users, User } from "@/data/users";
+import { Search, Sparkles, Loader2 } from "lucide-react";
+import { users as mockUsers, User } from "@/data/users";
 import { posts, Post } from "@/data/posts";
+import { Influencer } from "@/types/api";
+import { searchInfluencers } from "@/services/api";
 import { UserCard } from "@/components/UserCard";
 import { UserProfile } from "@/components/UserProfile";
 import { PostDetail } from "@/components/PostDetail";
@@ -11,15 +13,49 @@ import { cn } from "@/lib/utils";
 
 type View = "home" | "users" | "profile" | "post";
 
+// Convert API Influencer to User format
+const mapInfluencerToUser = (influencer: Influencer): User => {
+  const primaryAccount = influencer.accounts[0];
+  return {
+    id: influencer.id,
+    name: influencer.name,
+    username: primaryAccount?.username || influencer.name.toLowerCase().replace(/\s/g, ""),
+    avatar: influencer.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase(),
+    bio: primaryAccount?.bio || "",
+    followers: parseInt(primaryAccount?.followersCount || "0"),
+    following: parseInt(primaryAccount?.followingCount || "0"),
+  };
+};
+
 const Index = () => {
   const [view, setView] = useState<View>("home");
   const [username, setUsername] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    setView("users");
+    if (!username.trim()) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await searchInfluencers(username);
+      const users = response.data.map(mapInfluencerToUser);
+      setSearchResults(users);
+      setView("users");
+    } catch (err) {
+      console.error("Search failed:", err);
+      setError("Failed to search. Using mock data instead.");
+      setSearchResults(mockUsers);
+      setView("users");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleUserClick = (user: User) => {
@@ -47,14 +83,19 @@ const Index = () => {
     setUsername("");
     setSelectedUser(null);
     setSelectedPost(null);
+    setSearchResults([]);
+    setError(null);
   };
 
   const getUserPosts = (userId: string) => {
-    return posts.filter(post => post.userId === userId);
+    // For API users, return mock posts for now
+    return posts.filter(post => post.userId === userId).length > 0
+      ? posts.filter(post => post.userId === userId)
+      : posts.slice(0, 3); // Return first 3 mock posts if no matching posts
   };
 
   const getUserIndex = (userId: string) => {
-    return users.findIndex(u => u.id === userId);
+    return searchResults.findIndex(u => u.id === userId);
   };
 
   return (
@@ -92,6 +133,7 @@ const Index = () => {
                   placeholder="Enter username to explore..."
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  disabled={isLoading}
                   className={cn(
                     "h-12 pl-4 pr-12 rounded-full",
                     "bg-card border-border/50 shadow-soft",
@@ -102,19 +144,24 @@ const Index = () => {
                 <Button
                   type="submit"
                   size="icon"
+                  disabled={isLoading}
                   className={cn(
                     "absolute right-1.5 top-1/2 -translate-y-1/2",
                     "h-9 w-9 rounded-full",
                     "bg-primary hover:bg-primary/90 text-primary-foreground"
                   )}
                 >
-                  <Search className="h-4 w-4" />
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </form>
 
             <p className="mt-6 text-xs text-muted-foreground">
-              Try any username to discover featured voices
+              Search for influencers by name
             </p>
           </div>
         )}
@@ -123,22 +170,33 @@ const Index = () => {
         {view === "users" && (
           <div className="animate-fade-in">
             <div className="mb-6">
-              <h2 className="text-xl font-serif italic text-foreground">Featured voices</h2>
+              <h2 className="text-xl font-serif italic text-foreground">
+                {error ? "Featured voices" : `Results for "${username}"`}
+              </h2>
               <p className="text-sm text-muted-foreground mt-1">
-                {users.length} thought leaders to follow
+                {searchResults.length} {searchResults.length === 1 ? "result" : "results"} found
               </p>
+              {error && (
+                <p className="text-sm text-destructive mt-2">{error}</p>
+              )}
             </div>
 
-            <div className="space-y-3">
-              {users.map((user, index) => (
-                <UserCard
-                  key={user.id}
-                  user={user}
-                  onClick={() => handleUserClick(user)}
-                  index={index}
-                />
-              ))}
-            </div>
+            {searchResults.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                No results found. Try a different search term.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {searchResults.map((user, index) => (
+                  <UserCard
+                    key={user.id}
+                    user={user}
+                    onClick={() => handleUserClick(user)}
+                    index={index}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
