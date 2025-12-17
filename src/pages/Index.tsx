@@ -13,6 +13,9 @@ import { cn } from "@/lib/utils";
 
 type View = "home" | "users" | "profile" | "post";
 
+const URL_SOURCE = import.meta.env.VITE_URL_SOURCE || "http://localhost:3001/public/";
+
+
 interface UserWithAccount extends User {
   socialAccountId?: string;
 }
@@ -36,7 +39,7 @@ const mapInfluencerToUser = (influencer: Influencer): UserWithAccount => {
 const mapApiPostToPost = (apiPost: ApiPost, userId: string): Post => {
   // Check if there's a video file available
   const hasVideo = apiPost.filePath && apiPost.isDownloaded;
-  
+
   return {
     id: apiPost.id,
     userId: userId,
@@ -46,7 +49,7 @@ const mapApiPostToPost = (apiPost: ApiPost, userId: string): Post => {
     createdAt: apiPost.postedAt,
     media: hasVideo ? {
       type: "video",
-      url: `/${apiPost.filePath}`, // Files in public folder
+      url: `${URL_SOURCE}/${apiPost.filePath.replace(/^public[\\/]/, '')}`, // Files in public folder
     } : undefined,
   };
 };

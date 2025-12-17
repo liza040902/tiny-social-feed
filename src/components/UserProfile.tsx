@@ -62,15 +62,15 @@ export function UserProfile({ user, posts, onBack, onPostClick, userIndex }: Use
 
         {/* Stats */}
         <div className="mt-4 flex items-center gap-6 text-sm">
-          <div className="flex items-center gap-1.5">
+          {/* <div className="flex items-center gap-1.5">
             <Users className="h-4 w-4 text-muted-foreground" />
             <span className="font-medium text-foreground">{formatNumber(user.followers)}</span>
             <span className="text-muted-foreground">followers</span>
-          </div>
-          <div>
+          </div> */}
+          {/* <div>
             <span className="font-medium text-foreground">{formatNumber(user.following)}</span>
             <span className="text-muted-foreground ml-1">following</span>
-          </div>
+          </div> */}
         </div>
       </header>
 

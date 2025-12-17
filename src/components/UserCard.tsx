@@ -56,9 +56,9 @@ export function UserCard({ user, onClick, index }: UserCardProps) {
           <p className="mt-1.5 text-sm text-secondary-foreground line-clamp-2">
             {user.bio}
           </p>
-          <p className="mt-2 text-xs text-muted-foreground">
+          {/* <p className="mt-2 text-xs text-muted-foreground">
             <span className="font-medium text-foreground">{formatNumber(user.followers)}</span> followers
-          </p>
+          </p> */}
         </div>
       </div>
     </article>
