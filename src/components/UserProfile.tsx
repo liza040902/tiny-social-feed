@@ -20,11 +20,59 @@ interface UserProfileProps {
   onBack: () => void;
   onPostClick: (post: Post) => void;
   userIndex: number;
-  onCrawl?: () => void;
+  onCrawl?: (count: number) => void;
   isCrawling?: boolean;
   onLoadMore?: (page: number) => void;
   hasMore?: boolean;
   isLoadingMore?: boolean;
+  totalPosts?: number;
+}
+
+interface CrawlControlProps {
+  onCrawl: (count: number) => void;
+  isCrawling: boolean;
+  crawlCount: number;
+  setCrawlCount: (count: number) => void;
+}
+
+function CrawlControl({ onCrawl, isCrawling, crawlCount, setCrawlCount }: CrawlControlProps) {
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-muted-foreground">Fetch</span>
+        <input
+          type="number"
+          min="1"
+          max="50"
+          value={crawlCount}
+          onChange={(e) => setCrawlCount(Math.max(1, parseInt(e.target.value) || 1))}
+          className="w-16 h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        />
+        <span className="text-sm text-muted-foreground">posts</span>
+      </div>
+      <Button
+        onClick={() => onCrawl(crawlCount)}
+        disabled={isCrawling}
+        className={cn(
+          "bg-gradient-to-r from-primary to-accent",
+          "hover:opacity-90 text-white font-medium",
+          "shadow-glow"
+        )}
+      >
+        {isCrawling ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Fetching content...
+          </>
+        ) : (
+          <>
+            <Download className="mr-2 h-4 w-4" />
+            Fetch Latest Posts
+          </>
+        )}
+      </Button>
+    </div>
+  );
 }
 
 export function UserProfile({
@@ -37,9 +85,11 @@ export function UserProfile({
   isCrawling,
   onLoadMore,
   hasMore = false,
-  isLoadingMore = false
+  isLoadingMore = false,
+  totalPosts
 }: UserProfileProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [crawlCount, setCrawlCount] = useState(10);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
@@ -125,7 +175,9 @@ export function UserProfile({
       <section>
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-semibold text-foreground">Posts</h2>
-          <span className="text-sm text-muted-foreground">{posts.length} posts</span>
+          <span className="text-sm text-muted-foreground">
+            {totalPosts !== undefined ? totalPosts : posts.length} posts
+          </span>
         </div>
 
         {posts.length > 0 ? (
@@ -154,11 +206,24 @@ export function UserProfile({
             )}
 
             {/* End of posts message */}
-            {!hasMore && posts.length > 5 && (
-              <div className="py-8 text-center">
+            {!hasMore && (
+              <div className="py-8 text-center space-y-4">
                 <p className="text-sm text-muted-foreground">
                   You've reached the end of the posts
                 </p>
+                {onCrawl && (
+                  <div className="pt-4 border-t border-border/50 max-w-sm mx-auto">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Want to see more? Fetch older posts from the source.
+                    </p>
+                    <CrawlControl
+                      onCrawl={onCrawl}
+                      isCrawling={!!isCrawling}
+                      crawlCount={crawlCount}
+                      setCrawlCount={setCrawlCount}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </>
@@ -172,27 +237,12 @@ export function UserProfile({
               Want to discover more about this influencer? We can fetch their latest content for you.
             </p>
             {onCrawl && (
-              <Button
-                onClick={onCrawl}
-                disabled={isCrawling}
-                className={cn(
-                  "bg-gradient-to-r from-primary to-accent",
-                  "hover:opacity-90 text-white font-medium",
-                  "shadow-glow"
-                )}
-              >
-                {isCrawling ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Fetching content...
-                  </>
-                ) : (
-                  <>
-                    <Download className="mr-2 h-4 w-4" />
-                    Fetch Latest Posts
-                  </>
-                )}
-              </Button>
+              <CrawlControl
+                onCrawl={onCrawl}
+                isCrawling={!!isCrawling}
+                crawlCount={crawlCount}
+                setCrawlCount={setCrawlCount}
+              />
             )}
           </div>
         )}
