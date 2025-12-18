@@ -234,7 +234,7 @@ const Index = () => {
             <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-accent group-hover:shadow-glow transition-shadow">
               <Zap className="h-4 w-4 text-white" />
             </div>
-            <span className="text-lg font-bold tracking-tight">Pulse</span>
+            <span className="text-lg font-bold tracking-tight">HBars</span>
           </button>
         </div>
       </header>
