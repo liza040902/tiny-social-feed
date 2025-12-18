@@ -61,9 +61,11 @@ const Index = () => {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [searchResults, setSearchResults] = useState<UserWithAccount[]>([]);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
+  const [totalPosts, setTotalPosts] = useState<number | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingPosts, setIsLoadingPosts] = useState(false);
   const [isCrawling, setIsCrawling] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -112,14 +114,20 @@ const Index = () => {
     setSelectedUser(user);
     setView("profile");
     setIsLoadingPosts(true);
+    setHasMore(true);
 
     try {
       if (user.socialAccountId) {
         const response = await getAccountPosts(user.socialAccountId, 1, 10);
         const posts = response.data.map(p => mapApiPostToPost(p, user.id));
+        if (posts.length < 10) {
+          setHasMore(false);
+        }
         setUserPosts(posts);
+        setTotalPosts(response.meta?.totalItems);
       } else {
         setUserPosts([]);
+        setTotalPosts(0);
       }
     } catch (err) {
       console.error("Failed to fetch posts:", err);
@@ -130,7 +138,7 @@ const Index = () => {
   };
 
   const handleLoadMore = async (page: number) => {
-    if (!selectedUser?.socialAccountId || isLoadingPosts) return;
+    if (!selectedUser?.socialAccountId || isLoadingPosts || !hasMore) return;
 
     setIsLoadingPosts(true);
     try {
@@ -138,6 +146,9 @@ const Index = () => {
       const newPosts = response.data.map(p => mapApiPostToPost(p, selectedUser.id));
 
       // Append new posts to existing ones
+      if (newPosts.length < 10) {
+        setHasMore(false);
+      }
       setUserPosts(prevPosts => [...prevPosts, ...newPosts]);
     } catch (err) {
       console.error("Failed to load more posts:", err);
@@ -146,12 +157,12 @@ const Index = () => {
     }
   };
 
-  const handleCrawl = async () => {
+  const handleCrawl = async (count: number) => {
     if (!selectedUser) return;
 
     setIsCrawling(true);
     try {
-      await crawlInfluencer(selectedUser.username, 10);
+      await crawlInfluencer(selectedUser.username, count);
       toast({
         title: "Crawl started!",
         description: `Fetching latest posts for @${selectedUser.username}. This may take a moment.`,
@@ -331,7 +342,7 @@ const Index = () => {
         {/* User Profile View */}
         {view === "profile" && selectedUser && (
           <div>
-            {isLoadingPosts ? (
+            {isLoadingPosts && userPosts.length === 0 ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 <span className="ml-3 text-muted-foreground">Loading posts...</span>
@@ -346,8 +357,9 @@ const Index = () => {
                 onCrawl={handleCrawl}
                 isCrawling={isCrawling}
                 onLoadMore={handleLoadMore}
-                hasMore={userPosts.length > 0 && userPosts.length % 10 === 0}
+                hasMore={hasMore}
                 isLoadingMore={isLoadingPosts}
+                totalPosts={totalPosts}
               />
             )}
           </div>
